@@ -48,4 +48,4 @@ psutil<2.0.0,>=1.1.1
 tooz>=1.19.0 # Apache-2.0
 
 # rackspace requirements
--r rackspace-requirements.txt
+#-r rackspace-requirements.txt
