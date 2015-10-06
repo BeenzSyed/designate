@@ -1,2 +1,3 @@
 # rackspace requirements
--e git+git@github.com:rackerlabs/designate-dupdomain-hook.git#egg=dupdomainhook
+.
+file:./designate-dupdomain-hook
