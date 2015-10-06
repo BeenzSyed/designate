@@ -1,5 +1,6 @@
 # rackspace requirements
--e git+git@github.com:rackerlabs/designate-dupdomain-hook.git#egg=dupdomainhook
+# we land dupdomain-hook by way of Jenkins + multi-scm
+-e file://designate-dupdomain-hook/
 # 20151006
 aioeventlet==0.4
 alembic==0.8.2
