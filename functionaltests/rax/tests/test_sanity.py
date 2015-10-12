@@ -17,6 +17,7 @@ limitations under the License.
 from functionaltests.api.v2.base import DesignateV2Test
 from functionaltests.rax.clients.domain_client import DomainClient
 from functionaltests.rax.fixtures import DomainFixture
+from functionaltests.rax.fixtures import RecordFixture
 
 
 class TestSanity(DesignateV2Test):
@@ -32,4 +33,9 @@ class TestSanity(DesignateV2Test):
 
     def test_v1_create_domain_sanity_check(self):
         fixture = self.useFixture(DomainFixture())
+        self.assertEqual(fixture.post_resp.status, 202)
+
+    def test_v1_create_record_sanity_check(self):
+        domain_fixture = self.useFixture(DomainFixture())
+        fixture = self.useFixture(RecordFixture(domain_fixture.domain))
         self.assertEqual(fixture.post_resp.status, 202)
