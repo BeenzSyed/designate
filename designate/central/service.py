@@ -53,6 +53,17 @@ from designate.mdns import rpcapi as mdns_rpcapi
 from designate.pool_manager import rpcapi as pool_manager_rpcapi
 from designate.zone_manager import rpcapi as zone_manager_rpcapi
 
+import abc
+
+try:
+    import newrelic
+    newrelic_loaded = True
+except ImportError:
+    newrelic_loaded = False
+
+if newrelic_loaded:
+    newrelic.agent.initialize('/etc/newrelic/newrelic.ini')
+
 
 LOG = logging.getLogger(__name__)
 DOMAIN_LOCKS = threading.local()
@@ -260,10 +271,60 @@ def notification(notification_type):
     return outer
 
 
+class NewRelicInstrumentedMeta(type):
+    def __new__(mcs, name, bases, attrs):
+        import types
+
+        for attr_name, attr_value in attrs.iteritems():
+            if isinstance(attr_value, types.FunctionType):
+                attrs[attr_name] = mcs.newrelic_decorator(attr_value)
+
+        return super(NewRelicInstrumentedMeta, mcs).__new__(mcs, name, bases, attrs)
+
+    @staticmethod
+    def _get_class_from_frame(frame):
+        # Taken from http://stackoverflow.com/a/2220759
+        import inspect
+        args, _, _, value_dict = inspect.getargvalues(frame)
+        if len(args) and args[0] == 'self':
+            instance = value_dict.get('self', None)
+            if instance:
+                return getattr(instance, '__class__', None)
+
+        return None
+
+    @classmethod
+    def newrelic_decorator(mcs, func):
+        def wrapper(*args, **kwargs):
+
+            # only instrument central calls coming from RPCDispatcher;
+            #   otherwise, calls to central methods from central will cause errors with NewRelic:
+            #   "transaction already in progress"
+            import inspect
+            frame = inspect.stack()[1][0]
+            calling_class = mcs._get_class_from_frame(frame)
+
+            if calling_class and calling_class.__name__ == 'RPCDispatcher':
+                application = newrelic.agent.application()
+                with newrelic.agent.BackgroundTask(application, name=func.__name__, group='Designate Central'):
+                    return func(*args, **kwargs)
+            else:
+                return func(*args, **kwargs)
+        return wrapper
+
+
+class ServiceMeta(NewRelicInstrumentedMeta, abc.ABCMeta):
+    # This class is required for metaclass conflict resolution
+    pass
+
+
 class Service(service.RPCService, service.Service):
     RPC_API_VERSION = '5.6'
 
     target = messaging.Target(version=RPC_API_VERSION)
+
+    if newrelic_loaded:
+        __metaclass__ = ServiceMeta
 
     def __init__(self, threads=None):
         super(Service, self).__init__(threads=threads)
