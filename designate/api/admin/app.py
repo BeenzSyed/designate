@@ -20,6 +20,15 @@ from oslo_log import log as logging
 
 from designate.api.v2 import patches
 
+try:
+    import newrelic
+    newrelic_loaded = True
+except ImportError:
+    newrelic_loaded = False
+
+if newrelic_loaded:
+    newrelic.agent.initialize('/etc/newrelic/newrelic.ini')
+
 
 LOG = logging.getLogger(__name__)
 
@@ -42,5 +51,8 @@ def setup_app(pecan_config):
         force_canonical=getattr(pecan_config.app, 'force_canonical', True),
         request_cls=patches.Request
     )
+
+    if newrelic_loaded:
+        app = newrelic.agent.WSGIApplicationWrapper(app)
 
     return app

@@ -28,6 +28,15 @@ from oslo_serialization import jsonutils
 from designate import exceptions
 from designate import utils
 
+try:
+    import newrelic
+    newrelic_loaded = True
+except ImportError:
+    newrelic_loaded = False
+
+if newrelic_loaded:
+    newrelic.agent.initialize('/etc/newrelic/newrelic.ini')
+
 
 LOG = logging.getLogger(__name__)
 
@@ -118,6 +127,9 @@ def factory(global_config, **local_conf):
         extmgr = named.NamedExtensionManager('designate.api.v1.extensions',
                                              names=extensions)
         extmgr.map(_register_blueprint)
+
+    if newrelic_loaded:
+        app = newrelic.agent.WSGIApplicationWrapper(app)
 
     return app
 
