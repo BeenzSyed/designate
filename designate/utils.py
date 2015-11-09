@@ -501,3 +501,53 @@ def bind_udp(host, port):
     sock_udp.bind((host, port))
 
     return sock_udp
+
+
+def get_class_from_frame(frame):
+    # Taken from http://stackoverflow.com/a/2220759
+    import inspect
+    args, _, _, value_dict = inspect.getargvalues(frame)
+    if len(args) and args[0] == 'self':
+        instance = value_dict.get('self', None)
+        if instance:
+            return getattr(instance, '__class__', None)
+
+    return None
+
+
+def _should_instrument(newrelic_loaded, calling_class_filter):
+    """
+    Support filtering by calling class to prevent NewRelic agent errors when attempting
+    to instrument a method call twice
+    """
+
+    if not newrelic_loaded:
+        return False
+
+    if not calling_class_filter:
+        return True
+
+    import inspect
+
+    # Central-specific: calling class is found two levels up in the frame
+    frame = inspect.stack()[2][0]
+    calling_class = get_class_from_frame(frame)
+
+    return calling_class and calling_class_filter == calling_class.__name__
+
+
+def newrelic(newrelic_loaded, group_name, calling_class_filter=None):
+    def outer(f):
+        @functools.wraps(f)
+        def newrelic_decorator(self, *args, **kwargs):
+            if _should_instrument(newrelic_loaded, calling_class_filter):
+                import newrelic
+
+                application = newrelic.agent.application()
+                with newrelic.agent.BackgroundTask(application, name=f.__name__, group=group_name):
+                    return f(self, *args, **kwargs)
+            else:
+                return f(self, *args, **kwargs)
+
+        return newrelic_decorator
+    return outer

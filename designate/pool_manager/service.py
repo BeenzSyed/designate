@@ -38,6 +38,18 @@ from designate.i18n import _LW
 from designate.pool_manager import cache
 
 
+try:
+    import newrelic
+    newrelic_loaded = True
+except ImportError:
+    newrelic_loaded = False
+
+if newrelic_loaded:
+    newrelic.agent.initialize('/etc/newrelic/newrelic.ini')
+
+NEWRELIC_GROUP_NAME = 'Designate Pool Manager'
+
+
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
 
@@ -241,6 +253,7 @@ class Service(service.RPCService, coordination.CoordinationMixin,
     # Standard Create/Update/Delete Methods
 
     @hookpoints.hook_point()
+    @utils.newrelic(newrelic_loaded, NEWRELIC_GROUP_NAME)
     def create_domain(self, context, domain):
         """
         :param context: Security context information.
@@ -315,6 +328,7 @@ class Service(service.RPCService, coordination.CoordinationMixin,
 
         return False
 
+    @utils.newrelic(newrelic_loaded, NEWRELIC_GROUP_NAME)
     def update_domain(self, context, domain):
         """
         :param context: Security context information.
@@ -392,6 +406,7 @@ class Service(service.RPCService, coordination.CoordinationMixin,
             context, domain, also_notify.host, also_notify.port, self.timeout,
             self.retry_interval, self.max_retries, 0)
 
+    @utils.newrelic(newrelic_loaded, NEWRELIC_GROUP_NAME)
     def delete_domain(self, context, domain):
         """
         :param context: Security context information.
@@ -456,6 +471,7 @@ class Service(service.RPCService, coordination.CoordinationMixin,
 
         return False
 
+    @utils.newrelic(newrelic_loaded, NEWRELIC_GROUP_NAME)
     def update_status(self, context, domain, nameserver, status,
                       actual_serial):
         """

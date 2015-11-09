@@ -24,10 +24,23 @@ from oslo_config import cfg
 from oslo_log import log as logging
 
 from designate import exceptions
+from designate import utils
 from designate.mdns import xfr
 from designate.central import rpcapi as central_api
 from designate.i18n import _LI
 from designate.i18n import _LW
+
+
+try:
+    import newrelic
+    newrelic_loaded = True
+except ImportError:
+    newrelic_loaded = False
+
+if newrelic_loaded:
+    newrelic.agent.initialize('/etc/newrelic/newrelic.ini')
+
+NEWRELIC_GROUP_NAME = 'Designate mDNS'
 
 
 LOG = logging.getLogger(__name__)
@@ -90,6 +103,7 @@ class RequestHandler(xfr.XFRMixin):
             yield self._handle_query_error(request, dns.rcode.REFUSED)
             raise StopIteration
 
+    @utils.newrelic(newrelic_loaded, NEWRELIC_GROUP_NAME)
     def _handle_notify(self, request):
         """
         Constructs the response to a NOTIFY and acts accordingly on it.
@@ -158,6 +172,7 @@ class RequestHandler(xfr.XFRMixin):
         yield response
         raise StopIteration
 
+    @utils.newrelic(newrelic_loaded, NEWRELIC_GROUP_NAME)
     def _handle_query_error(self, request, rcode):
         """
         Construct an error response with the rcode passed in.
@@ -225,6 +240,7 @@ class RequestHandler(xfr.XFRMixin):
 
         return r_rrset
 
+    @utils.newrelic(newrelic_loaded, NEWRELIC_GROUP_NAME)
     def _handle_axfr(self, request):
         context = request.environ['context']
         q_rrset = request.question[0]
@@ -344,6 +360,7 @@ class RequestHandler(xfr.XFRMixin):
                 request.keyalgorithm)
         return renderer
 
+    @utils.newrelic(newrelic_loaded, NEWRELIC_GROUP_NAME)
     def _handle_record_query(self, request):
         """Handle a DNS QUERY request for a record"""
         context = request.environ['context']

@@ -26,9 +26,23 @@ import dns.opcode
 from oslo_config import cfg
 from oslo_log import log as logging
 
+from designate import utils
 from designate.mdns import base
 from designate.i18n import _LI
 from designate.i18n import _LW
+
+
+try:
+    import newrelic
+    newrelic_loaded = True
+except ImportError:
+    newrelic_loaded = False
+
+if newrelic_loaded:
+    newrelic.agent.initialize('/etc/newrelic/newrelic.ini')
+
+NEWRELIC_GROUP_NAME = 'Designate mDNS'
+
 
 dns_query = eventlet.import_patched('dns.query')
 
@@ -40,6 +54,7 @@ class NotifyEndpoint(base.BaseEndpoint):
     RPC_API_VERSION = '2.0'
     RPC_API_NAMESPACE = 'notify'
 
+    @utils.newrelic(newrelic_loaded, NEWRELIC_GROUP_NAME)
     def notify_zone_changed(self, context, domain, host, port, timeout,
                             retry_interval, max_retries, delay):
         """
@@ -64,6 +79,7 @@ class NotifyEndpoint(base.BaseEndpoint):
             domain, host, port, timeout, retry_interval, max_retries,
             notify=True)
 
+    @utils.newrelic(newrelic_loaded, NEWRELIC_GROUP_NAME)
     def poll_for_serial_number(self, context, domain, nameserver, timeout,
                                retry_interval, max_retries, delay):
         """
