@@ -87,8 +87,22 @@ class APIv2Adapter(base.DesignateAdapter):
         else:
             base_uri = cls.BASE_URI
 
-        return {'self': '%s%s/%s' %
-                (base_uri, cls._get_path(request), object.id)}
+        link = '%s%s/%s' % (base_uri, cls._get_path(request), object.id)
+        return {'self': cls.insert_tenant(
+                            request.environ['context'].tenant,
+                            link
+                        )}
+
+    @classmethod
+    def insert_tenant(cls, obj, link):
+        if cfg.CONF['service:api'].enable_tenant_id_in_url:
+            try:
+                tenant = obj + "/"
+                return link.replace("v2/", "v2/" + tenant)
+            except Exception:
+                return link
+
+        return link
 
     @classmethod
     def _get_path(cls, request):
@@ -103,9 +117,11 @@ class APIv2Adapter(base.DesignateAdapter):
 
     @classmethod
     def _get_collection_links(cls, item_list, request):
-
         links = {
-            'self': cls._get_collection_href(request)
+            'self': cls.insert_tenant(
+                        request.environ['context'].tenant,
+                        cls._get_collection_href(request)
+                    )
         }
         params = request.GET
 
@@ -126,7 +142,10 @@ class APIv2Adapter(base.DesignateAdapter):
         # Bug: this creates a link to "next" even on the last page if
         # len(item_list) happens to be == limit
         if limit is not None and limit == len(item_list):
-            links['next'] = cls._get_next_href(request, item_list)
+            links['next'] = cls.insert_tenant(
+                                request.environ['context'].tenant,
+                                cls._get_next_href(request, item_list)
+                            )
 
         return links
 

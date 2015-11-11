@@ -56,14 +56,14 @@ class ZoneExportAPIv2Adapter(base.APIv2Adapter):
         obj = super(ZoneExportAPIv2Adapter, cls)._render_object(
             object, *args, **kwargs)
 
-        if obj['location'] and obj['location'].startswith('designate://'):
+        if obj['location'] and object['location'].startswith('designate://'):
             # Get the base uri from the self link, which respects host headers
             base_uri = obj['links']['self']. \
                 split(cls._get_path(kwargs['request']))[0]
 
             obj['links']['export'] = \
                 '%s/%s' % \
-                (base_uri, obj['location'].split('://')[1])
+                (base_uri, 'export')
 
         return obj
 
