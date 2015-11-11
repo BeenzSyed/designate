@@ -87,6 +87,9 @@ debug = False
 # Enable host request headers
 #enable_host_header = False
 
+# Put the tenant id in self links
+#enable_tenant_id_in_url = True
+
 # The base uri used in responses
 #api_base_uri = 'http://127.0.0.1:9001/'
 
